@@ -1,36 +1,63 @@
-import { Alchemy, Network } from 'alchemy-sdk';
-import { useEffect, useState } from 'react';
-
+import { useState } from 'react';
+import { Link, BrowserRouter, Routes, Route } from 'react-router-dom';
+import Home from './Pages/Home';
+import Transaction from './Pages/Transaction';
+import TransactionList from './Pages/TransactionList';
+import Address from './Pages/Address';
+import Block from './Pages/Block';
+import { getBlock } from './utils';
 import './App.css';
 
-// Refer to the README doc for more information about using API
-// keys in client-side code. You should never do this in production
-// level code.
-const settings = {
-  apiKey: process.env.REACT_APP_ALCHEMY_API_KEY,
-  network: Network.ETH_MAINNET,
-};
-
-
-// In this week's lessons we used ethers.js. Here we are using the
-// Alchemy SDK is an umbrella library with several different packages.
-//
-// You can read more about the packages here:
-//   https://docs.alchemy.com/reference/alchemy-sdk-api-surface-overview#api-surface
-const alchemy = new Alchemy(settings);
-
 function App() {
-  const [blockNumber, setBlockNumber] = useState();
+  const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    async function getBlockNumber() {
-      setBlockNumber(await alchemy.core.getBlockNumber());
+  const searchData = async (event) => {
+    event.preventDefault();
+    if (searchTerm.startsWith('0x')) {
+      if (searchTerm.length === 42) {
+        window.location.replace(`/address/${searchTerm}`);
+      } else if (searchTerm.length === 66) {
+        if (await getBlock(searchTerm)) window.location.replace(`/block/${searchTerm}`);
+        else window.location.replace(`/tx/${searchTerm}`);
+      }
+    } else {
+      window.location.replace(`/block/${searchTerm}`);
     }
+  };
 
-    getBlockNumber();
-  });
-
-  return <div className="App">Block Number: {blockNumber}</div>;
+  return (
+    <BrowserRouter>
+      <div className='w-5/6 mx-auto mt-8'>
+        <header className='center-header'>
+          <h1 className='font-bold text-2xl mb-4'>
+            <Link to='/' title=''>Ethereum Block Explorer</Link>
+          </h1>
+        </header>
+        <div className='form-container'>
+          <form className='search-form' onSubmit={searchData}>
+            <div>
+              <label htmlFor='searchTerm'>Insert a block number, transaction hash or an address...</label>
+              <input
+                id='searchTerm'
+                type='text'
+                placeholder='Insert here...'
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <button type='submit'>Search</button>
+          </form>
+        </div>
+        <Routes>
+          <Route path='/' element={<Home />} />
+          <Route path='/tx/:hash' element={<Transaction />} />
+          <Route path='/address/:hash' element={<Address />} />
+          <Route path='/block/:hash' element={<Block />} />
+          <Route path='/block/:hash/tx' element={<TransactionList />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
+  );
 }
 
 export default App;
